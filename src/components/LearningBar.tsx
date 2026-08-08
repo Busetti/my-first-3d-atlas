@@ -6,6 +6,7 @@ const TABS: { id: Mode; emoji: string; title: string; hint: string; from: string
   { id: 'flags', emoji: '🏳️', title: 'Flags', hint: 'Guess the flag', from: '#ff9dbd', to: '#e8437b' },
   { id: 'find', emoji: '🗺️', title: 'Find It', hint: 'Hunt on the globe', from: '#7ceccf', to: '#17a883' },
   { id: 'animals', emoji: '🐼', title: 'Animals', hint: 'Where do I live?', from: '#ffd98a', to: '#f08a1c' },
+  { id: 'memory', emoji: '🧠', title: 'Match', hint: 'Flag to name', from: '#ffb3cd', to: '#c8175a' },
   { id: 'fly', emoji: '✈️', title: 'Travel', hint: 'Fly the world', from: '#c4a6ff', to: '#7c4ddb' },
 ]
 
@@ -22,7 +23,7 @@ export function LearningBar() {
         initial={{ y: 90, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 22, delay: 0.25 }}
-        className="glass mx-auto grid max-w-3xl grid-cols-5 gap-1 rounded-[24px] p-1.5 sm:gap-2.5 sm:p-3"
+        className="glass mx-auto grid max-w-3xl grid-cols-6 gap-1 rounded-[24px] p-1.5 sm:gap-2 sm:p-2.5"
       >
         {TABS.map((tab) => {
           const active = mode === tab.id
@@ -32,7 +33,7 @@ export function LearningBar() {
                 type="button"
                 onClick={() => setMode(tab.id)}
                 aria-pressed={active}
-                className="squish relative grid h-[74px] w-full place-items-center rounded-[20px] px-1 sm:h-[86px]"
+                className="squish relative grid h-[70px] w-full place-items-center rounded-[20px] px-0.5 sm:h-[84px]"
                 style={{
                   background: active ? `linear-gradient(180deg, ${tab.from}, ${tab.to})` : 'rgba(255,255,255,0.12)',
                   boxShadow: active ? `0 10px 26px -8px ${tab.to}` : 'none',

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Country } from './data/countries'
 import { setSoundEnabled, sfx, stopSpeaking } from './lib/audio'
 
-export type Mode = 'explore' | 'flags' | 'find' | 'animals' | 'fly'
+export type Mode = 'explore' | 'flags' | 'find' | 'animals' | 'memory' | 'fly'
 export type View = 'globe' | 'flat'
 
 const FAVOURITES_KEY = 'atlas.favourites'

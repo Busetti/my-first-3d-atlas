@@ -14,6 +14,7 @@ import {
   type Trip,
 } from '../data/games'
 import { FINDABLE, lonLatToVector, vectorToLonLat } from '../lib/world'
+import { pickForPractice, record } from '../lib/mastery'
 import { sfx, speak } from '../lib/audio'
 import { useAtlas } from '../store'
 import { Flag } from './Flag'
@@ -31,6 +32,7 @@ export function GamePanel() {
         {mode === 'flags' && <FlagGame key="flags" />}
         {mode === 'find' && <FindGame key="find" />}
         {mode === 'animals' && <AnimalGame key="animals" />}
+        {mode === 'memory' && <MemoryGame key="memory" />}
         {mode === 'fly' && <FlyGame key="fly" />}
       </AnimatePresence>
     </div>
@@ -149,6 +151,7 @@ function FlagGame() {
               animate={state === 'wrong' ? { x: [0, -9, 9, -6, 6, 0] } : state === 'right' ? { scale: [1, 1.12, 1] } : {}}
               transition={{ duration: 0.45 }}
               onClick={() => {
+                record(round.target.mapName, isRight)
                 if (isRight) select(country, { fly: true })
                 answer(isRight, country.mapName, `Yes! That is the flag of ${country.name}. ${country.kid}`)
               }}
@@ -174,7 +177,9 @@ function FlagGame() {
 }
 
 function makeFlagRound(previous: Country | null) {
-  const target = pickDifferent(FAMOUS, previous)
+  // Ask about whichever flag is least well known rather than a random one.
+  const [first, second] = pickForPractice(FAMOUS, 2)
+  const target = first === previous ? second : first
   const others = shuffle(FAMOUS.filter((c) => c.mapName !== target.mapName)).slice(0, 2)
   return { target, options: shuffle([target, ...others]) }
 }
@@ -377,6 +382,149 @@ function makeAnimalRound(previous: AnimalCard | null) {
   const home = homeOf(animal)
   const others = shuffle(FAMOUS.filter((c) => c.mapName !== animal.home)).slice(0, 2)
   return { animal, home, options: shuffle([...(home ? [home] : []), ...others]) }
+}
+
+// ── 🧠 Match ───────────────────────────────────────────────────────────────
+
+interface MemoryCard {
+  key: string
+  country: Country
+  kind: 'flag' | 'name'
+}
+
+const PAIRS = 6
+
+function makeBoard(): MemoryCard[] {
+  return shuffle(
+    pickForPractice(FAMOUS, PAIRS).flatMap((country) => [
+      { key: `${country.mapName}-flag`, country, kind: 'flag' as const },
+      { key: `${country.mapName}-name`, country, kind: 'name' as const },
+    ]),
+  )
+}
+
+/**
+ * Pairs, the oldest memory game there is, pointed at the one thing a child most
+ * needs to stick: this flag belongs to this name. Turning two cards over and
+ * being wrong is what makes the right answer memorable, so a miss costs nothing
+ * but a moment.
+ */
+function MemoryGame() {
+  const select = useAtlas((s) => s.select)
+  const addStar = useAtlas((s) => s.addStar)
+  const celebrate = useAtlas((s) => s.celebrate)
+
+  const [board, setBoard] = useState(makeBoard)
+  const [faceUp, setFaceUp] = useState<number[]>([])
+  const [matched, setMatched] = useState<string[]>([])
+  const [tries, setTries] = useState(0)
+  const timer = useRef<number>(0)
+
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+
+  const solved = matched.length === PAIRS
+
+  useEffect(() => {
+    if (!solved) return
+    sfx('star')
+    celebrate()
+    speak('You matched them all! Well done!')
+    timer.current = window.setTimeout(() => {
+      setBoard(makeBoard())
+      setFaceUp([])
+      setMatched([])
+      setTries(0)
+    }, 3200)
+  }, [solved, celebrate])
+
+  const flip = (index: number) => {
+    const card = board[index]
+    if (faceUp.length === 2 || faceUp.includes(index) || matched.includes(card.country.mapName)) return
+
+    const next = [...faceUp, index]
+    setFaceUp(next)
+    if (next.length < 2) {
+      sfx('tap')
+      return
+    }
+
+    setTries((t) => t + 1)
+    const [a, b] = next.map((i) => board[i])
+    const isPair = a.country.mapName === b.country.mapName && a.kind !== b.kind
+    record(a.country.mapName, isPair)
+
+    if (isPair) {
+      sfx('yay')
+      addStar()
+      speak(a.country.name)
+      select(a.country)
+      timer.current = window.setTimeout(() => {
+        setMatched((m) => [...m, a.country.mapName])
+        setFaceUp([])
+      }, 700)
+    } else {
+      sfx('oops')
+      timer.current = window.setTimeout(() => setFaceUp([]), 1100)
+    }
+  }
+
+  return (
+    <Panel>
+      <Question onRepeat={() => speak('Match each flag to its country name!')}>
+        Match the <span className="text-[#ffe08a]">flag</span> to its name!
+      </Question>
+
+      <div className="mt-3.5 grid grid-cols-3 gap-2" style={{ perspective: 900 }}>
+        {board.map((card, index) => {
+          const isMatched = matched.includes(card.country.mapName)
+          const up = isMatched || faceUp.includes(index)
+          return (
+            <motion.button
+              key={card.key}
+              type="button"
+              onClick={() => flip(index)}
+              aria-label={up ? card.country.name : 'Hidden card'}
+              animate={{ rotateY: up ? 180 : 0, scale: isMatched ? 0.95 : 1 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              className="relative h-[62px] sm:h-[70px]"
+              style={{ transformStyle: 'preserve-3d' }}
+            >
+              <span
+                className="absolute inset-0 grid place-items-center rounded-[18px] border-[3px] border-white/25 bg-gradient-to-br from-[#7c6cff]/60 to-[#3ec1ff]/50 text-[24px]"
+                style={{ backfaceVisibility: 'hidden' }}
+              >
+                🌍
+              </span>
+              <span
+                className={`absolute inset-0 grid place-items-center gap-0.5 rounded-[18px] border-[3px] px-1 ${
+                  isMatched ? 'border-[#7ceccf] bg-[#31d0aa]/35' : 'border-white/30 bg-white/15'
+                }`}
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+              >
+                {card.kind === 'flag' ? (
+                  <Flag emoji={card.country.flag} className="text-[30px] sm:text-[34px]" />
+                ) : (
+                  <span className="text-center text-[12px] leading-tight font-extrabold break-words sm:text-[13px]">
+                    {card.country.name}
+                  </span>
+                )}
+              </span>
+            </motion.button>
+          )
+        })}
+      </div>
+
+      <p className="animate-pop-in mt-3 text-center text-[16px] font-extrabold sm:text-[18px]">
+        {solved ? (
+          <span className="text-[#9cf3d6]">All matched in {tries} tries! 🎉</span>
+        ) : (
+          <span className="text-white/75">
+            {matched.length} of {PAIRS} found
+          </span>
+        )}
+      </p>
+    </Panel>
+  )
 }
 
 // ── ✈️ Travel ──────────────────────────────────────────────────────────────
