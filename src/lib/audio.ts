@@ -133,6 +133,7 @@ function pickVoice(): SpeechSynthesisVoice | undefined {
  */
 let speaking: SpeechSynthesisUtterance | null = null
 let settleTimer = 0
+let watchdogTimer = 0
 
 /** Reads a sentence aloud in a warm, slightly slow voice. */
 export function speak(text: string) {
@@ -141,7 +142,7 @@ export function speak(text: string) {
 
   window.clearTimeout(settleTimer)
 
-  const utter = () => {
+  const utter = (isRetry = false) => {
     const line = new SpeechSynthesisUtterance(text)
     line.rate = 0.88
     line.pitch = 1.15
@@ -153,6 +154,11 @@ export function speak(text: string) {
     } else {
       line.lang = 'en-US'
     }
+
+    let started = false
+    line.onstart = () => {
+      started = true
+    }
     line.onend = () => {
       if (speaking === line) speaking = null
     }
@@ -161,6 +167,20 @@ export function speak(text: string) {
     }
     speaking = line
     synth.speak(line)
+
+    // Chrome sometimes accepts an utterance and then never starts it: no start,
+    // no end, no error, just `speaking` stuck true. One clean retry recovers it.
+    // Only ever one, so a genuinely mute engine cannot start a loop.
+    if (!isRetry) {
+      window.clearTimeout(watchdogTimer)
+      watchdogTimer = window.setTimeout(() => {
+        if (!started && speaking === line) {
+          synth.cancel()
+          speaking = null
+          window.setTimeout(() => utter(true), 60)
+        }
+      }, 1200)
+    }
   }
 
   // Chrome wedges its speech queue if you cancel and speak in the same tick:
@@ -187,6 +207,7 @@ export function speak(text: string) {
 
 export function stopSpeaking() {
   window.clearTimeout(settleTimer)
+  window.clearTimeout(watchdogTimer)
   speaking = null
   window.speechSynthesis?.cancel()
 }
