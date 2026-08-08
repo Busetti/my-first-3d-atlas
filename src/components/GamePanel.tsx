@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import * as THREE from 'three'
 import { CONTINENTS, type Country } from '../data/countries'
-import { ANIMALS, FAMOUS, pickDifferent, shuffle, type AnimalCard } from '../data/games'
-import { FINDABLE } from '../lib/world'
+import {
+  ANIMAL_DECK,
+  angleBetween,
+  FAMOUS,
+  homeOf,
+  makeTrip,
+  pickDifferent,
+  shuffle,
+  type AnimalCard,
+  type Trip,
+} from '../data/games'
+import { FINDABLE, lonLatToVector, vectorToLonLat } from '../lib/world'
 import { sfx, speak } from '../lib/audio'
 import { useAtlas } from '../store'
 import { Flag } from './Flag'
@@ -20,6 +31,7 @@ export function GamePanel() {
         {mode === 'flags' && <FlagGame key="flags" />}
         {mode === 'find' && <FindGame key="find" />}
         {mode === 'animals' && <AnimalGame key="animals" />}
+        {mode === 'fly' && <FlyGame key="fly" />}
       </AnimatePresence>
     </div>
   )
@@ -357,10 +369,133 @@ function AnimalGame() {
 }
 
 function makeAnimalRound(previous: AnimalCard | null) {
-  const animal = pickDifferent(ANIMALS, previous)
-  const home = FAMOUS.find((c) => c.mapName === animal.home) ?? null
+  const animal = pickDifferent(ANIMAL_DECK, previous)
+  // Looked up across the whole atlas, not just the famous list: the penguin
+  // lives in Antarctica, which the famous list does not contain, and searching
+  // only there left that round with three wrong answers and no right one.
+  const home = homeOf(animal)
   const others = shuffle(FAMOUS.filter((c) => c.mapName !== animal.home)).slice(0, 2)
   return { animal, home, options: shuffle([...(home ? [home] : []), ...others]) }
+}
+
+// ── ✈️ Travel ──────────────────────────────────────────────────────────────
+
+function FlyGame() {
+  const startFlight = useAtlas((s) => s.startFlight)
+  const flight = useAtlas((s) => s.flight)
+  const lookAt = useAtlas((s) => s.lookAt)
+  const [trip, setTrip] = useState<Trip>(() => makeTrip(null))
+  const flying = flight !== null
+
+  const shuffleTrip = useCallback(() => {
+    sfx('pop')
+    setTrip((t) => makeTrip(t))
+  }, [])
+
+  const takeOff = () => {
+    if (flying) return
+    // Pull the camera back far enough to watch the whole journey, aimed at the
+    // halfway point rather than at either end.
+    const mid = midpoint(trip)
+    lookAt(mid[0], mid[1], routeZoom(trip))
+    startFlight(trip.from, trip.to)
+  }
+
+  // Once the plane is up, the panel gets out of its own way: the whole point of
+  // this mode is watching the journey, and a full-size card would cover it.
+  if (flying) {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -14 }}
+        className="glass pointer-events-auto flex items-center gap-2.5 rounded-full px-4 py-2.5 sm:gap-3 sm:px-5"
+      >
+        <Flag emoji={trip.from.flag} className="text-[24px] sm:text-[28px]" />
+        <motion.span
+          aria-hidden
+          animate={{ x: [-5, 5, -5] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          className="text-[22px] sm:text-[26px]"
+        >
+          ✈️
+        </motion.span>
+        <Flag emoji={trip.to.flag} className="text-[24px] sm:text-[28px]" />
+        <span className="truncate text-[15px] font-extrabold sm:text-[17px]">Flying to {trip.to.name}…</span>
+      </motion.div>
+    )
+  }
+
+  return (
+    <Panel>
+      <Question onRepeat={() => speak(`Let's fly from ${trip.from.name} to ${trip.to.name}!`)}>
+        Let’s fly to <span className="text-[#ffe08a]">{trip.to.name}</span>!
+      </Question>
+
+      <div className="mt-3.5 flex items-center justify-center gap-2 sm:gap-3">
+        <Airport country={trip.from} label="From" />
+        <span aria-hidden className="text-[28px] sm:text-[34px]">
+          ✈️
+        </span>
+        <Airport country={trip.to} label="To" />
+      </div>
+
+      <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={takeOff}
+          className="squish rounded-full bg-gradient-to-b from-[#7ceccf] to-[#17a883] px-5 py-2.5 text-[17px] font-extrabold text-[#03301f] shadow-lg shadow-emerald-900/40 sm:text-[19px]"
+        >
+          🛫 Take off!
+        </button>
+        <button
+          type="button"
+          onClick={shuffleTrip}
+          className="squish rounded-full bg-white/18 px-4 py-2.5 text-[15px] font-extrabold sm:text-[17px]"
+        >
+          🔁 New trip
+        </button>
+      </div>
+
+      <p className="animate-pop-in mt-3 text-center text-[16px] font-extrabold text-white/75 sm:text-[18px]">
+        About {kilometres(trip)} km — press take off!
+      </p>
+    </Panel>
+  )
+}
+
+function Airport({ country, label }: { country: Country; label: string }) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[20px] border-[3px] border-white/25 bg-white/12 px-2 py-2.5">
+      <span className="text-[11px] font-extrabold tracking-wide text-white/70 uppercase">{label}</span>
+      <Flag emoji={country.flag} className="text-[30px] sm:text-[38px]" />
+      <span className="w-full truncate text-center text-[15px] leading-tight font-extrabold sm:text-[17px]">
+        {country.name}
+      </span>
+    </div>
+  )
+}
+
+/** Halfway along the great circle, so the camera watches the middle of the trip. */
+function midpoint(trip: Trip): [number, number] {
+  const a = new THREE.Vector3(...lonLatToVector(trip.from.center[0], trip.from.center[1]))
+  const b = new THREE.Vector3(...lonLatToVector(trip.to.center[0], trip.to.center[1]))
+  const mid = a.add(b)
+  // Exact opposites cancel out and leave nothing to aim at.
+  if (mid.lengthSq() < 1e-6) mid.set(0, 1, 0)
+  mid.normalize()
+  return vectorToLonLat(mid.x, mid.y, mid.z)
+}
+
+/** Longer journeys need the camera further back to fit the whole arc. */
+function routeZoom(trip: Trip): number {
+  return THREE.MathUtils.clamp(1 + angleBetween(trip.from, trip.to) / 190, 1.05, 1.75)
+}
+
+function kilometres(trip: Trip): number {
+  // Rounded to the nearest hundred; the number is for wonder, not navigation.
+  return Math.round((angleBetween(trip.from, trip.to) * 111.32) / 100) * 100
 }
 
 // ── Feedback strip ────────────────────────────────────────────────────────

@@ -147,6 +147,15 @@ export function lonLatToVector(lon: number, lat: number): [number, number, numbe
   return [-Math.cos(phi) * Math.sin(theta), Math.cos(theta), Math.sin(phi) * Math.sin(theta)]
 }
 
+/** The inverse of `lonLatToVector`, for reading a point back off the sphere. */
+export function vectorToLonLat(x: number, y: number, z: number): [number, number] {
+  const length = Math.hypot(x, y, z) || 1
+  const lat = 90 - (Math.acos(Math.min(1, Math.max(-1, y / length))) * 180) / Math.PI
+  let phi = Math.atan2(z, -x)
+  if (phi < 0) phi += Math.PI * 2
+  return [(phi * 180) / Math.PI - 180, lat]
+}
+
 /** Which country is under this longitude/latitude, if any. */
 export function countryAt(lon: number, lat: number): Country | null {
   for (const s of shapes) {

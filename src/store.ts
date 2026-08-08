@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Country } from './data/countries'
 import { setSoundEnabled, sfx, stopSpeaking } from './lib/audio'
 
-export type Mode = 'explore' | 'flags' | 'find' | 'animals'
+export type Mode = 'explore' | 'flags' | 'find' | 'animals' | 'fly'
 export type View = 'globe' | 'flat'
 
 const FAVOURITES_KEY = 'atlas.favourites'
@@ -32,20 +32,39 @@ interface AtlasState {
   soundOn: boolean
   favourites: string[]
   stars: number
-  /** Where the camera should swing to next; cleared once the flight starts. */
-  flyTo: Country | null
+  /** Where the camera should swing to next; cleared once the move starts. */
+  flyTo: FlyTarget | null
+  /** The journey a plane is currently flying, if any. */
+  flight: Flight | null
   celebrating: boolean
 
   setMode: (mode: Mode) => void
   toggleView: () => void
-  select: (country: Country | null, options?: { fly?: boolean; speak?: boolean }) => void
+  select: (country: Country | null, options?: { fly?: boolean }) => void
+  lookAt: (lon: number, lat: number, zoom?: number) => void
   setHovered: (mapName: string | null) => void
   setTarget: (mapName: string | null) => void
   clearFlyTo: () => void
+  startFlight: (from: Country, to: Country) => void
+  endFlight: () => void
   toggleSound: () => void
   toggleFavourite: (mapName: string) => void
   addStar: () => void
   celebrate: () => void
+}
+
+/** A point to swing the view to, with an optional distance multiplier. */
+export interface FlyTarget {
+  lon: number
+  lat: number
+  zoom: number
+}
+
+export interface Flight {
+  from: Country
+  to: Country
+  /** Bumped per journey so the plane restarts even on a repeated route. */
+  id: number
 }
 
 export const useAtlas = create<AtlasState>((set, get) => {
@@ -63,6 +82,7 @@ export const useAtlas = create<AtlasState>((set, get) => {
     favourites: readList(FAVOURITES_KEY),
     stars: Number(localStorage.getItem(STARS_KEY) ?? 0),
     flyTo: null,
+    flight: null,
     celebrating: false,
 
     setMode: (mode) => {
@@ -70,7 +90,7 @@ export const useAtlas = create<AtlasState>((set, get) => {
       stopSpeaking()
       // Clear the card too: a leftover country from the last game only confuses
       // things, and every mode should start from a clean globe.
-      set({ mode, target: null, selected: null })
+      set({ mode, target: null, selected: null, flight: null })
     },
 
     toggleView: () =>
@@ -89,9 +109,11 @@ export const useAtlas = create<AtlasState>((set, get) => {
       set((s) => ({
         selected: country,
         pickCount: s.pickCount + 1,
-        flyTo: options?.fly ? country : s.flyTo,
+        flyTo: options?.fly ? { lon: country.center[0], lat: country.center[1], zoom: 1 } : s.flyTo,
       }))
     },
+
+    lookAt: (lon, lat, zoom = 1) => set({ flyTo: { lon, lat, zoom } }),
 
     setHovered: (mapName) => {
       if (get().hovered !== mapName) set({ hovered: mapName })
@@ -100,6 +122,14 @@ export const useAtlas = create<AtlasState>((set, get) => {
     setTarget: (mapName) => set({ target: mapName }),
 
     clearFlyTo: () => set({ flyTo: null }),
+
+    startFlight: (from, to) =>
+      set((s) => ({
+        flight: { from, to, id: (s.flight?.id ?? 0) + 1 },
+        selected: null,
+      })),
+
+    endFlight: () => set({ flight: null }),
 
     toggleSound: () =>
       set((s) => {

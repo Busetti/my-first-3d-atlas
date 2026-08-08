@@ -18,7 +18,8 @@ npm run dev
 | 🌎 **Explore** | Drag to spin, pinch or scroll to zoom, tap any country for its card. |
 | 🏳️ **Flags** | "Which flag is Japan?" — three big flags, one tap. |
 | 🗺️ **Find It** | "Find Australia on the globe!" — hunt for it, with hints and a **Show me** rescue. |
-| 🐼 **Animals** | "Where does the panda live?" — pick the country from three. |
+| 🐼 **Animals** | "Where does the panda live?" — 42 animals, pick the country from three. |
+| ✈️ **Travel** | Pick a journey and press take off; a plane flies the great circle between two countries, trailing vapour. |
 
 The 🗺️ button in the header unrolls the planet into a flat wall map and rolls it
 back up again. Everything keeps working either way: tapping, highlighting,
@@ -29,9 +30,13 @@ twelve words, easy vocabulary, happy tone. A 🔊 **Listen** button reads the
 whole card aloud, and ⭐ **Save Favorite** pins a country to the shelf on the
 left. Stars and favourites persist in `localStorage`.
 
-Four cartoon landmarks float on the surface — the Eiffel Tower, Taj Mahal,
-Statue of Liberty and the Pyramids of Giza. Tapping one makes it bounce, flies
-the camera to its country and says a sentence about it.
+Thirteen cartoon landmarks stand on the surface — the Eiffel Tower, Taj Mahal,
+Statue of Liberty, Pyramids of Giza, Great Wall, Sydney Opera House, Christ the
+Redeemer, Colosseum, Big Ben, Mount Fuji, Mount Everest, Machu Picchu and the
+Easter Island heads. Tapping one makes it bounce, flies the camera to its
+country and says a sentence about it. Their name tags declutter themselves: each
+tag claims a screen rectangle and any that would overlap one already placed
+stays hidden, so a crowded Europe never turns into a pile of labels.
 
 ## How it works
 

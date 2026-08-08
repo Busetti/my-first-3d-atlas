@@ -8,6 +8,7 @@ import { Flag } from './Flag'
 export function InfoCard() {
   const selected = useAtlas((s) => s.selected)
   const mode = useAtlas((s) => s.mode)
+  const flying = useAtlas((s) => s.flight !== null)
   const wide = useMediaQuery('(min-width: 1024px)')
 
   // On a phone the card and a game question share the same screen, so during a
@@ -17,7 +18,8 @@ export function InfoCard() {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-[124px] z-30 flex justify-center px-3 sm:bottom-[136px] lg:inset-x-auto lg:top-28 lg:right-5 lg:bottom-auto lg:block lg:px-0">
       <AnimatePresence mode="wait">
-        {selected && <Card key={selected.mapName} country={selected} compact={compact} />}
+        {/* Nothing covers the sky while a plane is crossing it. */}
+        {selected && !flying && <Card key={selected.mapName} country={selected} compact={compact} />}
       </AnimatePresence>
     </div>
   )

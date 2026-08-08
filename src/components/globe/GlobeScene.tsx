@@ -5,6 +5,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import * as THREE from 'three'
 import { Earth, GLOBE_RADIUS } from './Earth'
 import { Landmarks } from './Landmarks'
+import { Flight } from './Flight'
 import { lonLatToVector } from '../../lib/world'
 import { FLAT_H, FLAT_W, lonLatToFlat, morph } from '../../lib/morph'
 import { useAtlas } from '../../store'
@@ -95,6 +96,7 @@ function Scene({ onReady }: { onReady: () => void }) {
 
       <Earth maxAnisotropy={gl.capabilities.getMaxAnisotropy()} />
       <Landmarks />
+      <Flight />
 
       <Sparkles count={150} scale={[18, 12, 18]} size={5} speed={0.22} opacity={0.6} color="#fff2b6" />
       <Sparkles count={70} scale={[12, 9, 12]} size={9} speed={0.12} opacity={0.35} color="#9ad8ff" />
@@ -184,9 +186,9 @@ function CameraRig({ controls, distance }: { controls: RefObject<OrbitControlsIm
     const narrow = width < 1024
 
     if (view === 'flat') {
-      const [x, y] = lonLatToFlat(flyTo.center[0], flyTo.center[1])
+      const [x, y] = lonLatToFlat(flyTo.lon, flyTo.lat)
       // Zoom in as well — at the whole-map distance a country is a smudge.
-      const zoom = distance * (narrow ? 0.62 : 0.62)
+      const zoom = distance * 0.62 * flyTo.zoom
       const visibleH = 2 * zoom * Math.tan(((FOV * Math.PI) / 180) / 2)
       const visibleW = visibleH * (width / height)
       // Aiming the camera *past* the country is what pushes the country itself
@@ -199,8 +201,8 @@ function CameraRig({ controls, distance }: { controls: RefObject<OrbitControlsIm
       )
       orbitGoal.current = null
     } else {
-      const dir = new THREE.Vector3(...lonLatToVector(flyTo.center[0], flyTo.center[1]))
-      const dest = new THREE.Spherical().setFromVector3(dir.multiplyScalar(distance * 0.88))
+      const dir = new THREE.Vector3(...lonLatToVector(flyTo.lon, flyTo.lat))
+      const dest = new THREE.Spherical().setFromVector3(dir.multiplyScalar(distance * 0.88 * flyTo.zoom))
       dest.phi = THREE.MathUtils.clamp(dest.phi + (narrow ? 0.58 : 0.16), 0.3, Math.PI - 0.3)
       orbitGoal.current = dest
       panGoal.current = null

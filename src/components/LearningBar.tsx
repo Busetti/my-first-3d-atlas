@@ -6,6 +6,7 @@ const TABS: { id: Mode; emoji: string; title: string; hint: string; from: string
   { id: 'flags', emoji: '🏳️', title: 'Flags', hint: 'Guess the flag', from: '#ff9dbd', to: '#e8437b' },
   { id: 'find', emoji: '🗺️', title: 'Find It', hint: 'Hunt on the globe', from: '#7ceccf', to: '#17a883' },
   { id: 'animals', emoji: '🐼', title: 'Animals', hint: 'Where do I live?', from: '#ffd98a', to: '#f08a1c' },
+  { id: 'fly', emoji: '✈️', title: 'Travel', hint: 'Fly the world', from: '#c4a6ff', to: '#7c4ddb' },
 ]
 
 export function LearningBar() {
@@ -21,7 +22,7 @@ export function LearningBar() {
         initial={{ y: 90, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 22, delay: 0.25 }}
-        className="glass mx-auto grid max-w-3xl grid-cols-4 gap-1.5 rounded-[24px] p-2 sm:gap-3 sm:p-3"
+        className="glass mx-auto grid max-w-3xl grid-cols-5 gap-1 rounded-[24px] p-1.5 sm:gap-2.5 sm:p-3"
       >
         {TABS.map((tab) => {
           const active = mode === tab.id
@@ -44,9 +45,11 @@ export function LearningBar() {
                     transition={{ type: 'spring', stiffness: 340, damping: 28 }}
                   />
                 )}
-                <span className={`text-[26px] leading-none sm:text-[32px] ${active ? 'animate-wiggle' : ''}`}>{tab.emoji}</span>
-                <span className="mt-1 truncate text-[13px] leading-none font-extrabold sm:text-[17px]">{tab.title}</span>
-                <span className="mt-0.5 hidden truncate text-[11px] leading-none font-bold text-white/80 sm:block">
+                <span className={`text-[23px] leading-none sm:text-[30px] ${active ? 'animate-wiggle' : ''}`}>{tab.emoji}</span>
+                <span className="mt-1 w-full truncate px-0.5 text-center text-[11px] leading-none font-extrabold sm:text-[16px]">
+                  {tab.title}
+                </span>
+                <span className="mt-0.5 hidden w-full truncate px-0.5 text-center text-[11px] leading-none font-bold text-white/80 sm:block">
                   {tab.hint}
                 </span>
               </button>
