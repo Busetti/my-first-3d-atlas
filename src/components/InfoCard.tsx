@@ -128,9 +128,9 @@ function Row({ icon, label, value, tint }: { icon: string; label: string; value:
       </span>
       <div className="min-w-0">
         <dt className="text-[11px] font-extrabold tracking-wide text-white/70 uppercase">{label}</dt>
-        <dd className="truncate text-[17px] leading-tight font-extrabold" title={value}>
-          {value}
-        </dd>
+        {/* Wraps rather than truncates: "Washington, D.C." cut to "Washington, …"
+            is worse than a second line, and a child cannot hover for a tooltip. */}
+        <dd className="text-[17px] leading-tight font-extrabold break-words hyphens-auto">{value}</dd>
       </div>
     </div>
   )
