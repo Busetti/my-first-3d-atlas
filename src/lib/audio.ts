@@ -18,9 +18,25 @@ function ensureContext(): AudioContext | null {
       window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!Ctor) return null
     ctx = new Ctor()
+
+    // Everything runs through a compressor before the speakers. Short blips at
+    // a safe peak level read as quiet, and a child on a laptop at half volume
+    // can miss them entirely; compressing lets the whole mix sit much louder
+    // without the overlapping notes of the win fanfare clipping.
+    const squash = ctx.createDynamicsCompressor()
+    squash.threshold.value = -18
+    squash.knee.value = 10
+    squash.ratio.value = 8
+    // Fast enough to catch the attack of a blip before it clips.
+    squash.attack.value = 0.001
+    squash.release.value = 0.12
+
+    const makeup = ctx.createGain()
+    makeup.gain.value = 1.15
+
     master = ctx.createGain()
-    master.gain.value = 0.9
-    master.connect(ctx.destination)
+    master.gain.value = 1
+    master.connect(squash).connect(makeup).connect(ctx.destination)
   }
   if (ctx.state !== 'running') void ctx.resume()
   return ctx
@@ -65,26 +81,26 @@ export function sfx(kind: Sfx) {
   if (!enabled) return
   switch (kind) {
     case 'tap':
-      tone(660, 0, 0.12, 0.18, 'triangle')
+      tone(660, 0, 0.16, 0.38, 'triangle')
       break
     case 'pop':
-      tone(880, 0, 0.09, 0.22, 'sine')
-      tone(1320, 0.04, 0.09, 0.12, 'sine')
+      tone(880, 0, 0.12, 0.42, 'sine')
+      tone(1320, 0.04, 0.12, 0.24, 'sine')
       break
     case 'yay':
       // A happy little major arpeggio.
-      ;[523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.09, 0.28, 0.22, 'triangle'))
+      ;[523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.09, 0.32, 0.4, 'triangle'))
       break
     case 'oops':
-      tone(320, 0, 0.16, 0.18, 'sine')
-      tone(240, 0.12, 0.22, 0.16, 'sine')
+      tone(320, 0, 0.2, 0.36, 'sine')
+      tone(240, 0.12, 0.26, 0.32, 'sine')
       break
     case 'star':
-      ;[1046.5, 1318.5, 1568].forEach((f, i) => tone(f, i * 0.06, 0.2, 0.16, 'sine'))
+      ;[1046.5, 1318.5, 1568].forEach((f, i) => tone(f, i * 0.06, 0.24, 0.32, 'sine'))
       break
     case 'whoosh':
-      tone(300, 0, 0.3, 0.1, 'sine')
-      tone(520, 0.06, 0.3, 0.08, 'sine')
+      tone(300, 0, 0.34, 0.24, 'sine')
+      tone(520, 0.06, 0.34, 0.2, 'sine')
       break
   }
 }
