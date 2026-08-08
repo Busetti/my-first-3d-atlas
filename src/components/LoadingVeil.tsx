@@ -7,7 +7,9 @@ export function LoadingVeil({ show }: { show: boolean }) {
         <motion.div
           exit={{ opacity: 0, scale: 1.08 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
-          className="absolute inset-0 z-[60] grid place-items-center bg-[radial-gradient(120%_100%_at_50%_0%,#2b1a6b_0%,#1a1150_45%,#0d0730_100%)]"
+          // Never intercepts input: it has nothing to click, and while it fades
+          // out it would otherwise sit over the buttons and eat the first tap.
+          className="pointer-events-none absolute inset-0 z-[60] grid place-items-center bg-[radial-gradient(120%_100%_at_50%_0%,#2b1a6b_0%,#1a1150_45%,#0d0730_100%)]"
         >
           <div className="flex flex-col items-center gap-5">
             <motion.span

@@ -15,6 +15,15 @@ export default function App() {
   const [ready, setReady] = useState(false)
   const onReady = useCallback(() => setReady(true), [])
 
+  // The scene reports readiness from a requestAnimationFrame, which browsers
+  // pause in a background tab. Without a fallback the veil can sit at full
+  // opacity forever over an app that has actually finished loading, swallowing
+  // every tap — so give up waiting and let the child in regardless.
+  useEffect(() => {
+    const id = window.setTimeout(() => setReady(true), 6000)
+    return () => window.clearTimeout(id)
+  }, [])
+
   useKeyboardShortcuts()
 
   return (
