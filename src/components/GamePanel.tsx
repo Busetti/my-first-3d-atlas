@@ -47,6 +47,7 @@ function Panel({ children }: { children: ReactNode }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.94 }}
       transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+      data-atlas-panel
       className="glass pointer-events-auto relative w-full max-w-[560px] rounded-[24px] p-3.5 sm:p-5 lg:w-[420px]"
     >
       <button
@@ -410,6 +411,7 @@ function FlyGame() {
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -14 }}
+        data-atlas-panel
         className="glass pointer-events-auto flex items-center gap-2.5 rounded-full px-4 py-2.5 sm:gap-3 sm:px-5"
       >
         <Flag emoji={trip.from.flag} className="text-[24px] sm:text-[28px]" />

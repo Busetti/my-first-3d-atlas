@@ -38,6 +38,19 @@ const LABEL_HEIGHT = 0.62
  */
 const claimed: { x1: number; y1: number; x2: number; y2: number }[] = []
 
+/**
+ * Floating panels are claimed first, so a name tag never ends up printed over
+ * a game question or an info card. They mark themselves with `data-atlas-panel`
+ * rather than being hard-coded here, so moving a panel needs no change to this.
+ */
+function claimPanels() {
+  claimed.length = 0
+  for (const panel of document.querySelectorAll('[data-atlas-panel]')) {
+    const r = panel.getBoundingClientRect()
+    if (r.width > 0) claimed.push({ x1: r.left - 6, y1: r.top - 6, x2: r.right + 6, y2: r.bottom + 6 })
+  }
+}
+
 export function Landmarks() {
   return (
     <group>
@@ -80,8 +93,9 @@ function Landmark({ spec, index }: { spec: LandmarkSpec; index: number }) {
     const t = state.clock.elapsedTime
     const m = morph.value
 
-    // The first landmark of the frame opens a fresh sheet of claimed labels.
-    if (index === 0) claimed.length = 0
+    // The first landmark of the frame opens a fresh sheet of claimed rectangles,
+    // with the floating panels already marked out on it.
+    if (index === 0) claimPanels()
 
     // Ride the same flattening the planet is doing.
     if (group.current) {

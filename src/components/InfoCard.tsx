@@ -47,6 +47,7 @@ function Card({ country, compact }: { country: Country; compact: boolean }) {
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: 40, scale: 0.92 }}
       transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+      data-atlas-panel
       className="glass pointer-events-auto max-h-[58vh] w-full max-w-[440px] overflow-y-auto rounded-[24px] p-3.5 sm:p-4 lg:max-h-[calc(100dvh-250px)] lg:w-[390px] xl:w-[430px]"
       aria-live="polite"
     >
